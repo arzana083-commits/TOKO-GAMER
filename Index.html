@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mini Marketplace - Dynamic</title>
+    <title>Mini Marketplace - Supabase</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         body { font-family: sans-serif; background: #f4f4f4; padding: 20px; max-width: 900px; margin: auto; }
         .form-box { background: white; padding: 20px; border-radius: 10px; margin-bottom: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
@@ -21,9 +22,8 @@
 </head>
 <body>
 
-    <h1 style="text-align: center;">Mini Marketplace Interaktif</h1>
+    <h1 style="text-align: center;">Mini Marketplace Cloudflare + Supabase</h1>
 
-    <!-- Form Upload / Jual Barang -->
     <div class="form-box">
         <h3>Form Tambah Produk (Seller)</h3>
         <form id="productForm">
@@ -39,29 +39,42 @@
             <label>Nomor WhatsApp (Format: 62xxx):</label>
             <input type="text" id="noWa" required placeholder="Contoh: 6281234567890">
             
-            <button type="submit" class="btn-submit">Posting Barang</button>
+            <button type="submit" class="btn-submit">Posting Barang ke Database</button>
         </form>
     </div>
 
     <h2>Daftar Produk Tersedia</h2>
     <div class="container" id="product-list">
-        <!-- Produk akan muncul di sini secara otomatis dari database lokal -->
+        <p style="color: #777;">Memuat data dari database...</p>
     </div>
 
     <script>
-        // Ambil data dari LocalStorage saat halaman dimuat
-        let produkList = JSON.parse(localStorage.getItem('produkList')) || [];
+        const supabaseUrl = 'https://qlizgnldqselkivqeauz.supabase.co';
+        const supabaseKey = 'sb_publishable_kf2uYacsuGT8bvbitI4AdA_AywJnomZ'; 
+        
+        const _supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-        function renderProduk() {
+        async function ambilProduk() {
             const container = document.getElementById('product-list');
-            container.innerHTML = '';
+            
+            const { data, error } = await _supabase
+                .from('products')
+                .select('*');
 
-            if (produkList.length === 0) {
-                container.innerHTML = '<p style="color: #777;">Belum ada produk yang dijual.</p>';
+            if (error) {
+                console.error('Gagal ambil data:', error.message);
+                container.innerHTML = '<p style="color: red;">Gagal memuat produk dari database.</p>';
                 return;
             }
 
-            produkList.forEach((item, index) => {
+            container.innerHTML = '';
+
+            if (data.length === 0) {
+                container.innerHTML = '<p style="color: #777;">Belum ada produk di database.</p>';
+                return;
+            }
+
+            data.forEach((item) => {
                 const card = document.createElement('div');
                 card.className = 'card';
                 card.innerHTML = `
@@ -70,39 +83,43 @@
                         <p class="seller">Seller: <b>${item.seller}</b></p>
                         <p class="price">Rp ${Number(item.harga).toLocaleString('id-ID')}</p>
                     </div>
-                    <button onclick="hubungiPenjual('${item.noWa}', '${item.nama}')">Beli via WhatsApp</button>
+                    <button onclick="hubungiPenjual('${item.no_wa}', '${item.nama}')">Beli via WhatsApp</button>
                 `;
                 container.appendChild(card);
             });
         }
 
-        // Fungsi saat form disubmit
-        document.getElementById('productForm').addEventListener('submit', function(e) {
+        document.getElementById('productForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
             const barangBaru = {
                 nama: document.getElementById('namaProduk').value,
-                harga: document.getElementById('hargaProduk').value,
+                harga: parseInt(document.getElementById('hargaProduk').value),
                 seller: document.getElementById('namaSeller').value,
-                noWa: document.getElementById('noWa').value
+                no_wa: document.getElementById('noWa').value
             };
 
-            produkList.push(barangBaru);
-            localStorage.setItem('produkList', JSON.stringify(produkList));
+            const { data, error } = await _supabase
+                .from('products')
+                .insert([barangBaru]);
 
-            renderProduk();
-            this.reset();
-            alert('Produk berhasil diposting!');
+            if (error) {
+                alert('Gagal memposting barang: ' + error.message);
+                console.error(error);
+            } else {
+                alert('Produk berhasil diposting ke database!');
+                this.reset();
+                ambilProduk();
+            }
         });
 
         function hubungiPenjual(nomorHP, namaProduk) {
-            const pesan = `Halo, saya tertarik dengan produk ${namaProduk} yang dijual di marketplace. Apakah masih tersedia?`;
+            const pesan = `Halo, saya tertarik dengan produk ${namaProduk}. Apakah masih tersedia?`;
             const url = `https://wa.me/${nomorHP}?text=${encodeURIComponent(pesan)}`;
             window.open(url, '_blank');
         }
 
-        // Jalankan render saat awal buka
-        renderProduk();
+        ambilProduk();
     </script>
 </body>
 </html>
