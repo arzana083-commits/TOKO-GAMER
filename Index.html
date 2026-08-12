@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mini Marketplace - Dynamic</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f4; padding: 20px; max-width: 900px; margin: auto; }
+        .form-box { background: white; padding: 20px; border-radius: 10px; margin-bottom: 30px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .form-box input { width: 100%; padding: 8px; margin: 8px 0 15px 0; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        .container { display: flex; gap: 20px; flex-wrap: wrap; }
+        .card { background: white; padding: 15px; border-radius: 10px; width: 250px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; flex-direction: column; justify-content: space-between; }
+        .card h3 { margin-top: 0; }
+        .price { color: green; font-weight: bold; }
+        .seller { font-size: 0.85em; color: #666; margin-bottom: 10px; }
+        button { background: #25D366; color: white; border: none; padding: 10px; width: 100%; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        button:hover { background: #128C7E; }
+        .btn-submit { background: #007BFF; }
+        .btn-submit:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+
+    <h1 style="text-align: center;">Mini Marketplace Interaktif</h1>
+
+    <!-- Form Upload / Jual Barang -->
+    <div class="form-box">
+        <h3>Form Tambah Produk (Seller)</h3>
+        <form id="productForm">
+            <label>Nama Barang / Akun:</label>
+            <input type="text" id="namaProduk" required placeholder="Contoh: Akun Level Max">
+            
+            <label>Harga (Rp):</label>
+            <input type="number" id="hargaProduk" required placeholder="Contoh: 150000">
+            
+            <label>Nama Penjual / ID:</label>
+            <input type="text" id="namaSeller" required placeholder="Contoh: Budi_Store">
+            
+            <label>Nomor WhatsApp (Format: 62xxx):</label>
+            <input type="text" id="noWa" required placeholder="Contoh: 6281234567890">
+            
+            <button type="submit" class="btn-submit">Posting Barang</button>
+        </form>
+    </div>
+
+    <h2>Daftar Produk Tersedia</h2>
+    <div class="container" id="product-list">
+        <!-- Produk akan muncul di sini secara otomatis dari database lokal -->
+    </div>
+
+    <script>
+        // Ambil data dari LocalStorage saat halaman dimuat
+        let produkList = JSON.parse(localStorage.getItem('produkList')) || [];
+
+        function renderProduk() {
+            const container = document.getElementById('product-list');
+            container.innerHTML = '';
+
+            if (produkList.length === 0) {
+                container.innerHTML = '<p style="color: #777;">Belum ada produk yang dijual.</p>';
+                return;
+            }
+
+            produkList.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <div>
+                        <h3>${item.nama}</h3>
+                        <p class="seller">Seller: <b>${item.seller}</b></p>
+                        <p class="price">Rp ${Number(item.harga).toLocaleString('id-ID')}</p>
+                    </div>
+                    <button onclick="hubungiPenjual('${item.noWa}', '${item.nama}')">Beli via WhatsApp</button>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Fungsi saat form disubmit
+        document.getElementById('productForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const barangBaru = {
+                nama: document.getElementById('namaProduk').value,
+                harga: document.getElementById('hargaProduk').value,
+                seller: document.getElementById('namaSeller').value,
+                noWa: document.getElementById('noWa').value
+            };
+
+            produkList.push(barangBaru);
+            localStorage.setItem('produkList', JSON.stringify(produkList));
+
+            renderProduk();
+            this.reset();
+            alert('Produk berhasil diposting!');
+        });
+
+        function hubungiPenjual(nomorHP, namaProduk) {
+            const pesan = `Halo, saya tertarik dengan produk ${namaProduk} yang dijual di marketplace. Apakah masih tersedia?`;
+            const url = `https://wa.me/${nomorHP}?text=${encodeURIComponent(pesan)}`;
+            window.open(url, '_blank');
+        }
+
+        // Jalankan render saat awal buka
+        renderProduk();
+    </script>
+</body>
+</html>
